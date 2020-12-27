@@ -1,3 +1,24 @@
+//DONE TAP 10x on a key to reset the board
+//DONE Make a key shift to one layer when held down and toggle to another layer
+//when presse twice
+//DONE Test to use jkl as ctrl, shift and alt when held down. (Not implemented but same principle as for ctrl)
+//DONE Tap toggle TT could be sufficent for layer switching as i want.
+//DONE Arrow-keys?
+//DONE One-shot ctrl and shift
+//DONE Get mouse working
+//DONE Navigation layer? WASD/HJKL/JKLI as arrowkeys?
+//TODO Spacecadet shift and index finger for other open close tags?
+//TODO Layer switching on thumb or elsewhere?
+//TODO Media keys
+
+//emoji selector? Unicode input?
+// What I use. Shortcuts with windows key. Easy acces ctrl, alt, shift.
+// Printscreen, arrowkeys on WASD, HJKL, JKIL, Volume up, Volume down,
+// brightness up, brightness down, wifi toggle, bluetoot toggle, mic/speaker
+// toggle.
+
+
+
 #include QMK_KEYBOARD_H
 #include "print.h"
 #include "keymap_swedish.h"
@@ -11,14 +32,6 @@
 #define _NAV 3
 #define _ADJUST 4
 
-void keyboard_post_init_user(void) {
-  // Customise these values to desired behaviour
-  debug_enable=true;
-  //debug_matrix=true;
-  debug_keyboard=true;
-  //debug_mouse=true;
-}
-
 enum custom_keycodes {
   QWERTY = SAFE_RANGE,
   SYMB,
@@ -27,40 +40,71 @@ enum custom_keycodes {
   ADJUST,
 
 };
+
 enum {
-    CT_SE,
-    CT_CLN,
-    CT_EGG,
-    CT_FLSH,
-    X_TAP_DANCE,
     TD_F11,
-    TD_F12
+    TD_F12,
+	CT_RESET,
+	OP_LAYER
 };
 
-void dance_egg(qk_tap_dance_state_t *state, void *user_data) {
-	print("Test");
+void dance_reset(qk_tap_dance_state_t *state, void *user_data) {
     if (state->count >= 10) {
-        SEND_STRING("Safety dance!");
+		print("Test");
+		reset_keyboard();
         reset_tap_dance(state);
     }
 }
 
 
+bool op_layer_hold = false;
+void op_layer_finished(qk_tap_dance_state_t *state, void *user_data){
+	//if state->count state->interupted state->pressed
+	print("op_layer_finished");
 
-void dance_cln_finished(qk_tap_dance_state_t *state, void *user_data) {
-    if (state->count == 1) {
-        register_code(KC_A);
-    } else {
-        register_code(KC_B);
-    }
+	//Om nedtryckt i slutet av dance, använd som MO
+	if (state->pressed){
+		op_layer_hold = true;
+		layer_on(_SYMB);
+		// How do i reset the layer after hold is finnished?
+	}
+	// Annars om vi har tryckt totalt 2 ggr på en knapp så skall vi toggla
+	// lager. Kan bli lite fortare om vi sätter koden i den funktion som alltid
+	// kallas på. För detta kommer att bara kallas på när vi har tryckt på en
+	// annan knapp eller väntat TAPPING_TERM
+	else if (state->count == 2){
+		// Toggles game layer. Only maked left thumb a space.
+		//layer_state_is(_GAME) ? layer_off(_GAME) : layer_on(_GAME);
+		if(layer_state_is(_GAME))
+		{
+			print("turning off _GAME");
+			layer_off(_GAME);
+		}
+		else
+		{
+			print("turning on _GAME");
+			layer_on(_GAME);
+		}
+	}
+
 }
 
-void dance_cln_reset(qk_tap_dance_state_t *state, void *user_data) {
-    if (state->count == 1) {
-        unregister_code(KC_A);
-    } else {
-        unregister_code(KC_B);
-    }
+// Called when tap_dance is ended (key is released after hold)
+void op_layer_reset(qk_tap_dance_state_t *state, void *user_data) {
+	// How do i tell the difference if i got there from a hold or a double
+	// press? I could look if state is two, but i could still double press and
+	// hold. Store in a variable if you need that information. But since i do
+	// want to do the same thing every time, I do not need that. But I still
+	// include it for future reference.
+	print("op_layer_reset");
+	op_layer_hold = false;
+	layer_off(_SYMB);
+	/*
+	if(op_layer_hold)
+	{
+		layer_on();
+	}
+	*/
 }
 
 // Tap Dance definitions
@@ -68,8 +112,12 @@ qk_tap_dance_action_t tap_dance_actions[] = {
     // Tap once for Escape, twice for Caps Lock
     [TD_F11] = ACTION_TAP_DANCE_DOUBLE(KC_F1, KC_F11),
     [TD_F12] = ACTION_TAP_DANCE_DOUBLE(KC_F2, KC_F12),
-    [CT_EGG] = ACTION_TAP_DANCE_FN(dance_egg),
-    [CT_CLN] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance_cln_finished, dance_cln_reset),
+    [CT_RESET] = ACTION_TAP_DANCE_FN(dance_reset),
+	// The first function in the argument gets called on every keydown-press of
+	// the specified key. The secound one is called when it is finished (timeout
+	// or interrupted). The last one is called when the tapdance is reset (After
+	// key is released after timeout (or interrupt)?)
+	[OP_LAYER] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, op_layer_finished, op_layer_reset),
 };
 
 // Shortcut to make keymap more readable
@@ -85,6 +133,12 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 #define KC_ADPU LT(_ADJUST, KC_PGUP)
 #define OP_F1 TD(TD_F11)
 #define OP_F2 TD(TD_F12)
+#define OP_RESET TD(CT_RESET)
+#define OP_LAY TD(OP_LAYER)
+#define OP_SPC LT(_NAV, KC_SPC)
+#define OP_LCTRL OSM(MOD_LCTL)
+#define OP_LSFT OSM(MOD_LSFT)
+#define OP_RSFT OSM(MOD_RSFT)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
@@ -108,11 +162,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┐                         ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
      KC_TAB  ,SE_Q    ,SE_W    ,SE_E    ,SE_R    ,SE_T    ,_______ ,                          _______ ,SE_Y    ,SE_U    ,SE_I    ,SE_O    ,SE_P    ,SE_ARNG ,
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┤                         ├────────┼────────┼────────┼────────┼────────┼────────┼────────┤
-     KC_ESC  ,SE_A    ,SE_S    ,SE_D    ,SE_F    ,SE_G    ,CT_CLN  ,                          _______ ,SE_H    ,SE_J    ,SE_K    ,SE_L    ,SE_ODIA ,SE_ADIA ,
+     KC_ESC  ,SE_A    ,SE_S    ,SE_D    ,SE_F    ,SE_G    ,OP_LAY  ,                          OP_LAY  ,SE_H    ,SE_J    ,SE_K    ,SE_L    ,SE_ODIA ,SE_ADIA ,
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┐       ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┤
-     KC_LSFT ,SE_Z    ,SE_X    ,SE_C    ,SE_V    ,SE_B    , ,KC_A    ,        _______ ,_______ ,SE_N    ,SE_M    ,SE_COMM ,SE_DOT  ,SE_MINS ,KC_RSFT ,
+     OP_LSFT ,SE_Z    ,SE_X    ,SE_C    ,SE_V    ,SE_B    ,_______ ,OP_RESET,        DM_REC1 ,_______ ,SE_N    ,SE_M    ,SE_COMM ,SE_DOT  ,SE_MINS ,OP_RSFT ,
   //├────────┼────────┼────────┼────────┼────┬───┴────┬───┼────────┼────────┤       ├────────┼────────┼───┬────┴───┬────┼────────┼────────┼────────┼────────┤
-     KC_LCTRL,_______ ,KC_LGUI ,_______ ,     _______ ,    KC_BSPC ,_______ ,        KC_ENT  ,KC_SPC  ,    _______ ,     _______ ,_______ ,_______ ,KC_RCTRL
+     OP_LCTRL,_______ ,KC_LGUI ,_______ ,     KC_LALT ,    KC_BSPC ,_______ ,        KC_ENT  ,OP_SPC  ,    KC_RALT ,     _______ ,_______ ,_______ ,KC_RCTRL
   //└────────┴────────┴────────┴────────┘    └────────┘   └────────┴────────┘       └────────┴────────┘   └────────┘    └────────┴────────┴────────┴────────┘
   ),
 
@@ -125,7 +179,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┤                         ├────────┼────────┼────────┼────────┼────────┼────────┼────────┤
      _______ ,SE_LABK ,SE_RABK ,SE_LPRN ,SE_RPRN ,SE_ASTR ,_______ ,                          _______ ,_______ ,SE_4    ,SE_5    ,SE_6    ,SE_PLUS ,_______ ,
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┐       ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┤
-     _______ ,SE_ACUT ,SE_BSLS ,SE_LCBR ,SE_RCBR ,SE_PIPE ,_______ ,_______ ,        _______ ,_______ ,_______ ,SE_1    ,SE_2    ,SE_3    ,_______ ,_______ ,
+     _______ ,SE_ACUT ,SE_BSLS ,SE_LCBR ,SE_RCBR ,SE_PIPE ,_______ ,_______ ,        DM_PLY1 ,_______ ,_______ ,SE_1    ,SE_2    ,SE_3    ,_______ ,_______ ,
   //├────────┼────────┼────────┼────────┼────┬───┴────┬───┼────────┼────────┤       ├────────┼────────┼───┬────┴───┬────┼────────┼────────┼────────┼────────┤
      _______ ,_______ ,_______ ,_______ ,     _______ ,    _______ ,_______ ,        _______ ,_______ ,    SE_0    ,     _______ ,_______ ,SE_DOT  ,_______
   //└────────┴────────┴────────┴────────┘    └────────┘   └────────┴────────┘       └────────┴────────┘   └────────┘    └────────┴────────┴────────┴────────┘
@@ -142,9 +196,26 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┐       ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┤
      _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,        _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,
   //├────────┼────────┼────────┼────────┼────┬───┴────┬───┼────────┼────────┤       ├────────┼────────┼───┬────┴───┬────┼────────┼────────┼────────┼────────┤
-     _______ ,_______ ,_______ ,_______ ,     KC_SPC ,    _______ ,_______ ,        _______ ,_______ ,    _______ ,     _______ ,_______ ,_______ ,_______
+     _______ ,_______ ,_______ ,_______ ,     KC_SPC  ,    KC_SPC ,_______ ,        _______ ,_______ ,    _______ ,     _______ ,_______ ,_______ ,_______
   //└────────┴────────┴────────┴────────┘    └────────┘   └────────┴────────┘       └────────┴────────┘   └────────┘    └────────┴────────┴────────┴────────┘
   ),
+
+
+	[_NAV] = LAYOUT(
+  //┌────────┬────────┬────────┬────────┬────────┬────────┐                                           ┌────────┬────────┬────────┬────────┬────────┬────────┐
+     _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,                                            _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,
+  //├────────┼────────┼────────┼────────┼────────┼────────┼────────┐                         ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+     _______ ,_______ ,KC_MS_U ,_______ ,KC_WH_U ,_______ ,_______ ,                          _______ ,_______ ,_______ ,  KC_UP ,_______ ,_______ ,_______ ,
+  //├────────┼────────┼────────┼────────┼────────┼────────┼────────┤                         ├────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+     XXXXXXX ,KC_MS_L ,KC_MS_D ,KC_MS_R ,KC_WH_D ,XXXXXXX ,_______ ,                          _______ ,_______ ,KC_LEFT ,KC_DOWN ,KC_RIGHT,XXXXXXX ,XXXXXXX ,
+  //├────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┐       ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+     _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,        _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,_______ ,
+  //├────────┼────────┼────────┼────────┼────┬───┴────┬───┼────────┼────────┤       ├────────┼────────┼───┬────┴───┬────┼────────┼────────┼────────┼────────┤
+     XXXXXXX ,XXXXXXX ,XXXXXXX ,XXXXXXX ,     KC_BTN1 ,    KC_BTN2 ,_______ ,        _______ ,_______ ,    XXXXXXX ,     XXXXXXX ,XXXXXXX ,XXXXXXX ,XXXXXXX
+  //└────────┴────────┴────────┴────────┘    └────────┘   └────────┴────────┘       └────────┴────────┘   └────────┘    └────────┴────────┴────────┴────────┘
+  ),
+
+
 /*
 
 	[_GAME] = LAYOUT(
@@ -176,6 +247,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //└────────┴────────┴────────┴────────┘    └────────┘   └────────┴────────┘       └────────┴────────┘   └────────┘    └────────┴────────┴────────┴────────┘
   ),
 */
+	/*
   [_NAV] = LAYOUT(
   //┌────────┬────────┬────────┬────────┬────────┬────────┐                                           ┌────────┬────────┬────────┬────────┬────────┬────────┐
      _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,                                            _______ ,_______ ,_______ ,_______ ,_______ ,_______ ,
@@ -189,6 +261,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      XXXXXXX ,XXXXXXX ,XXXXXXX ,XXXXXXX ,     KC_BTN1 ,    KC_BTN2 ,_______ ,        _______ ,_______ ,    XXXXXXX ,     XXXXXXX ,XXXXXXX ,XXXXXXX ,XXXXXXX
   //└────────┴────────┴────────┴────────┘    └────────┘   └────────┴────────┘       └────────┴────────┘   └────────┘    └────────┴────────┴────────┴────────┘
   ),
+  */
 
   [_ADJUST] = LAYOUT(
   //┌────────┬────────┬────────┬────────┬────────┬────────┐                                           ┌────────┬────────┬────────┬────────┬────────┬────────┐

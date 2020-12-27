@@ -19,13 +19,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config_common.h"
 
+#define MOUSEKEY_INTERVAL 16
+
+#define MOUSEKEY_DELAY 0
+
+#define MOUSEKEY_TIME_TO_MAX 60
+
+#define MOUSEKEY_MAX_SPEED 5
+
+#define MOUSEKEY_WHEEL_DELAY 0
+
 /* USB Device descriptor parameter */
 #define VENDOR_ID       0x4D44 // "MD"
 #define PRODUCT_ID      0x5244 // "RD"
 #define DEVICE_VER      0x0100
-#define MANUFACTURER    Falbatech
+#define MANUFACTURER    Oskar Corperation
 #define PRODUCT         The Redox Keyboard
 #define DESCRIPTION     Split Ergodox-like 5x7 custom keyboard
+#define SPLIT_HAND_PIN F4
+#define TAPPING_TERM 175
 
 /* key matrix size */
 // Rows are doubled-up
@@ -33,9 +45,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MATRIX_COLS 7
 
 // wiring of each half
-#define MATRIX_ROW_PINS { D4, D7, E6, B4, B5 }
-#define MATRIX_COL_PINS { F5, F6, F7, B1, B3, B2, B6 }
-// #define MATRIX_COL_PINS { B6, B2, B3, B1, F7, F6, F5} //uncomment this line and comment line above if you need to reverse left-to-right key order
+#define MATRIX_COL_PINS_RIGHT { B5, B4, E6, D7, C6, D4, F6 }
+#define MATRIX_ROW_PINS_RIGHT { F7, B1, B3, B2, B6 }
+#define MATRIX_COL_PINS { F6, D4, C6, D7, B4, E6, B5 }
+#define MATRIX_ROW_PINS { B2, B6, B3, B1, F7 }
 
 /* COL2ROW or ROW2COL */
 #define DIODE_DIRECTION COL2ROW
@@ -50,7 +63,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DEBOUNCE 5
 
 /* serial.c configuration for split keyboard */
-#define SOFT_SERIAL_PIN D0
+//#define SOFT_SERIAL_PIN D0
 
 /* Mechanical locking support. Use KC_LCAP, KC_LNUM or KC_LSCR instead in keymap */
 #define LOCKING_SUPPORT_ENABLE
@@ -58,12 +71,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LOCKING_RESYNC_ENABLE
 
 /* ws2812 RGB LED */
-#define RGB_DI_PIN D3
+//#define RGB_DI_PIN D3
 
-#define RGBLED_NUM 14    // Number of LEDs
+//#define RGBLED_NUM 14    // Number of LEDs
 
-#define RGBLIGHT_SPLIT   // sync LEDs between RIGHT and LEFT hand
+//#define RGBLIGHT_SPLIT   // sync LEDs between RIGHT and LEFT hand
 
+#define USE_I2C
 /*
  * Feature disable options
  *  These options are also useful to firmware size reduction.
@@ -81,3 +95,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //#define NO_ACTION_ONESHOT
 //#define NO_ACTION_MACRO
 //#define NO_ACTION_FUNCTION
+
+#define ONESHOT_TAP_TOGGLE 5  /* Tapping this number of times holds the key until tapped once again. */
+#define ONESHOT_TIMEOUT 5000  /* Time (in ms) before the one shot key is released */
