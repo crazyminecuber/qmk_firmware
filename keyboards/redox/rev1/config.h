@@ -37,7 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PRODUCT         The Redox Keyboard
 #define DESCRIPTION     Split Ergodox-like 5x7 custom keyboard
 #define SPLIT_HAND_PIN F4
-#define TAPPING_TERM 175
+#define TAPPING_TERM 200
 
 /* key matrix size */
 // Rows are doubled-up
